@@ -28,7 +28,11 @@ def parse_json(json: str) -> dict | list | str | float | bool | None:
     >>> parse_json('{"a": null, "b": [1, true, "a\\\\nb"]}')
     {'a': None, 'b': [1.0, True, 'a\\nb']}
     """
-    return parse_json_base(json)[0]
+    (parsed, i) = parse_json_base(json)
+    i = skip_whitespace(json, i)
+    if i < len(json):
+        raise SyntaxError(f'Expected end of input at position {i}')
+    return parsed
 
 def format_err_str(message: str, text: str, index: int) -> str:
     """
@@ -43,7 +47,7 @@ def format_err_str(message: str, text: str, index: int) -> str:
             line_count += 1
             last_line_index = i
 
-    return message.replace("$position$", f"{i} (line: {line_count}, column: {index - last_line_index})")
+    return message.replace("$position$", f"{index} (line: {line_count}, column: {index - last_line_index})")
 
 def parse_json_base(json: str, i: int = 0) -> Tuple[dict | list | str | float | bool | None, int]:
     i = skip_whitespace(json, i)
@@ -67,6 +71,8 @@ def parse_json_obj(json: str, i: int) -> Tuple[dict, int]:
     i = skip_whitespace(json, i)
     obj = dict()
     try:
+        if json[i] == '}':
+            return (obj, i + 1)
         while True:
             (key, i) = parse_json_str(json, i)
             i = skip_whitespace(json, i)
@@ -96,6 +102,8 @@ def parse_json_arr(json: str, i: int) -> Tuple[list, int]:
     i = skip_whitespace(json, i)
     arr = list()
     try:
+        if json[i] == ']':
+            return (arr, i + 1)
         while True:
             (val, i) = parse_json_base(json, i)
             arr.append(val)
@@ -124,7 +132,7 @@ def parse_json_boolean(json: str, i: int) -> Tuple[bool, int]:
 
 def parse_json_str(json: str, i: int) -> Tuple[str, int]:
     if json[i] != '"':
-        raise SyntaxError(format_err_str(f"Unexpected character '{c}' at position $position$. Expected '\"'", json, i))
+        raise SyntaxError(format_err_str(f"Unexpected character '{json[i]}' at position $position$. Expected '\"'", json, i))
     i += 1
     last_was_esc = False
     char_list = []
@@ -156,6 +164,7 @@ def parse_json_str(json: str, i: int) -> Tuple[str, int]:
                 elif c == 'n': s = '\n'
                 elif c == 'r': s = '\r'
                 elif c == '/': s = '/'
+                elif c == '"': s = '"'
                 elif c == '\\': s = '\\'
                 elif c == 'u': hex_char_str = ''
                 else:
@@ -177,7 +186,7 @@ def parse_json_str(json: str, i: int) -> Tuple[str, int]:
 
 def parse_json_number(json: str, i: int) -> Tuple[float, int]:
     ind = i
-    while json[ind] in JSON_NUM_CHARS:
+    while ind < len(json) and json[ind] in JSON_NUM_CHARS:
         ind += 1
     num = json[i:ind]
     negative = num.startswith('-')
@@ -188,7 +197,7 @@ def parse_json_number(json: str, i: int) -> Tuple[float, int]:
         i += 1
     if num.startswith('.'):
         raise SyntaxError(format_err_str(f"Unexpected decimal point at position $position$. Expected a digit beforehand", json, i))
-    if len(num) >= 2 and num[0] == '0' and num[1] in JSON_NUM_START_CHARS:
+    if len(num) >= 2 and num[0] == '0' and num[1] >= '0' and num[1] <= '9':
         raise SyntaxError(format_err_str(f"Unexpected digit following a zero at position $position$. Expected '.', 'e', 'E', or end of number", json, i + 1))
 
     reached_dec = False
