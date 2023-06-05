@@ -162,13 +162,14 @@ def parse_json_str(json: str, i: int) -> Tuple[str, int]:
                 if c == 'b': s = '\b'
                 elif c == 'f': s = '\f'
                 elif c == 'n': s = '\n'
+                elif c == 't': s = '\t'
                 elif c == 'r': s = '\r'
                 elif c == '/': s = '/'
                 elif c == '"': s = '"'
                 elif c == '\\': s = '\\'
                 elif c == 'u': hex_char_str = ''
                 else:
-                    raise SyntaxError(format_err_str(f"Unexpected character '{c}' at position $position$. Expected 'b', 'f', 'n', 'r', '/', '\\', or 'u'", json, i))
+                    raise SyntaxError(format_err_str(f"Unexpected character '{c}' at position $position$. Expected 'b', 'f', 'n', 't', 'r', '/', '\\', or 'u'", json, i))
                 if s: char_list.append(s)
                 last_was_esc = False
                 continue
