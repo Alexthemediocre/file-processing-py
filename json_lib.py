@@ -7,6 +7,7 @@ Note that to_json can only convert dict, list, str, int, float, bool, and None v
 
 from __future__ import annotations
 from typing import Tuple
+import math
 
 # JSON -> Py
 
@@ -275,6 +276,8 @@ def to_json(data: dict | list | str | int | float | bool | None, spaces: str | i
     elif isinstance(data, str): return escape_str_for_json(data) # strings
     elif isinstance(data, bool): return 'true' if data else 'false' # booleans
     elif isinstance(data, int) or isinstance(data, float): # numbers
+        if not math.isfinite(data):
+            raise TypeError(f"Cannot convert the value 'inf' or 'nan' to a JSON number")
         num = str(data)
         if num.endswith('.0'): num = num[:-2] # save a bit of space by chopping off the decimal point if it was added unnecessarily
         return num
